@@ -15,6 +15,8 @@ import {
   Cell,
 } from "recharts";
 import { infrastructureTypes } from "@/lib/infrastructure-types";
+import { useEffect, useState } from "react";
+import { CACHE_KEY } from "@/lib/search-automation";
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -32,9 +34,75 @@ const projectsByStatus = [
 ];
 
 export default function Dashboard() {
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [updateStats, setUpdateStats] = useState({
+    totalUpdates: 0,
+    countriesUpdated: 0,
+    averageInvestment: 0,
+  });
+
+  useEffect(() => {
+    const handleRefresh = () => {
+      const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+      setLastUpdate(cache.lastUpdate);
+
+      // Calculate statistics from cache
+      if (cache.updates) {
+        const stats = {
+          totalUpdates: cache.updates.length,
+          countriesUpdated: new Set(cache.updates.map(u => u.country)).size,
+          averageInvestment: cache.updates.reduce((acc, curr) => {
+            return acc + (curr.results.reduce((sum, val) => sum + val, 0) / curr.results.length);
+          }, 0) / cache.updates.length,
+        };
+        setUpdateStats(stats);
+      }
+    };
+
+    // Initial load
+    handleRefresh();
+
+    // Listen for updates
+    window.addEventListener('refreshInvestments', handleRefresh);
+    return () => window.removeEventListener('refreshInvestments', handleRefresh);
+  }, []);
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-      <h1 className="text-3xl font-bold mb-8">Investment Dashboard</h1>
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold">Investment Dashboard</h1>
+        {lastUpdate && (
+          <p className="text-sm text-muted-foreground">
+            Last updated: {new Date(lastUpdate).toLocaleString()}
+          </p>
+        )}
+      </div>
+
+      {/* Update Summary Card */}
+      <Card className="mb-8 p-6">
+        <h2 className="text-lg font-semibold mb-4">Update Summary</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div>
+            <p className="text-sm text-muted-foreground">Total Updates</p>
+            <p className="text-2xl font-bold">{updateStats.totalUpdates}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Countries Updated</p>
+            <p className="text-2xl font-bold">{updateStats.countriesUpdated}</p>
+          </div>
+          <div>
+            <p className="text-sm text-muted-foreground">Average Investment</p>
+            <p className="text-2xl font-bold">
+              {new Intl.NumberFormat('en-US', {
+                style: 'currency',
+                currency: 'USD',
+                notation: 'compact',
+                maximumFractionDigits: 1,
+              }).format(updateStats.averageInvestment)}
+            </p>
+          </div>
+        </div>
+      </Card>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">

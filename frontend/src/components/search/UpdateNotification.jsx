@@ -3,59 +3,73 @@
 import { useEffect, useState } from "react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { RefreshCw } from "lucide-react";
-
-const SEARCH_ENGINES_VERSION = "1.0.0";
-const UPDATE_CHECK_INTERVAL = 1000 * 60 * 60; // Check every hour
+import { RefreshCw, AlertCircle } from "lucide-react";
+import { updateService } from "@/lib/update-service";
+import { useToast } from "@/hooks/use-toast";
 
 export default function UpdateNotification() {
-  const [updateAvailable, setUpdateAvailable] = useState(false);
+  const [updates, setUpdates] = useState([]);
+  const [isVisible, setIsVisible] = useState(false);
+  const { toast } = useToast();
 
   useEffect(() => {
-    const checkForUpdates = async () => {
-      try {
-        // This would typically be an API call to check for updates
-        // For demo purposes, we'll simulate an update check
-        const lastCheck = localStorage.getItem("lastUpdateCheck");
-        const currentVersion = localStorage.getItem("searchEnginesVersion");
+    // Start the update service
+    updateService.start();
 
-        if (!lastCheck || Date.now() - parseInt(lastCheck) > UPDATE_CHECK_INTERVAL) {
-          // Simulate API check for new version
-          const hasUpdate = currentVersion !== SEARCH_ENGINES_VERSION;
-          setUpdateAvailable(hasUpdate);
-          
-          localStorage.setItem("lastUpdateCheck", Date.now().toString());
-          localStorage.setItem("searchEnginesVersion", SEARCH_ENGINES_VERSION);
-        }
-      } catch (error) {
-        console.error("Failed to check for updates:", error);
-      }
+    // Listen for updates
+    const handleUpdate = (event) => {
+      const newUpdates = event.detail;
+      setUpdates(newUpdates);
+      setIsVisible(true);
+
+      toast({
+        title: "New Investment Data Available",
+        description: `${newUpdates.length} new updates found`,
+        duration: 5000,
+      });
     };
 
-    checkForUpdates();
-    const interval = setInterval(checkForUpdates, UPDATE_CHECK_INTERVAL);
+    window.addEventListener('infrastructureUpdate', handleUpdate);
 
-    return () => clearInterval(interval);
+    // Cleanup
+    return () => {
+      updateService.stop();
+      window.removeEventListener('infrastructureUpdate', handleUpdate);
+    };
   }, []);
 
-  if (!updateAvailable) return null;
+  if (!isVisible || updates.length === 0) return null;
 
   return (
-    <Alert className="fixed bottom-4 right-4 w-96">
-      <RefreshCw className="h-4 w-4" />
-      <AlertTitle>Update Available</AlertTitle>
+    <Alert className="fixed bottom-4 right-4 w-96 shadow-lg">
+      <AlertCircle className="h-4 w-4" />
+      <AlertTitle>Investment Updates Available</AlertTitle>
       <AlertDescription>
-        <p className="mb-2">New search engines are available for your region.</p>
-        <Button
-          size="sm"
-          onClick={() => {
-            // This would typically trigger the update process
-            setUpdateAvailable(false);
-            localStorage.setItem("searchEnginesVersion", SEARCH_ENGINES_VERSION);
-          }}
-        >
-          Update Now
-        </Button>
+        <p className="mb-2">
+          {updates.length} new investment updates found across {
+            new Set(updates.map(u => u.country)).size
+          } countries.
+        </p>
+        <div className="flex gap-2">
+          <Button
+            size="sm"
+            onClick={() => {
+              // Trigger data refresh in the UI
+              window.dispatchEvent(new CustomEvent('refreshInvestments'));
+              setIsVisible(false);
+            }}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Update Now
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setIsVisible(false)}
+          >
+            Dismiss
+          </Button>
+        </div>
       </AlertDescription>
     </Alert>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CACHE_KEY } from "@/lib/search-automation";
 
 // Sample data - in real app this would come from an API
 const sampleProjects = [
@@ -59,6 +60,31 @@ export default function Projects() {
   const [selectedType, setSelectedType] = useState("all");
   const [selectedStatus, setSelectedStatus] = useState("all");
   const [selectedProject, setSelectedProject] = useState(null);
+  const [lastUpdate, setLastUpdate] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    // Load initial cache
+    const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+    setLastUpdate(cache.lastUpdate);
+
+    // Listen for refresh events
+    const handleRefresh = async () => {
+      setIsLoading(true);
+      try {
+        const cache = JSON.parse(localStorage.getItem(CACHE_KEY) || '{}');
+        // Update your projects data here based on cache
+        setLastUpdate(cache.lastUpdate);
+      } catch (error) {
+        console.error('Failed to refresh data:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    window.addEventListener('refreshInvestments', handleRefresh);
+    return () => window.removeEventListener('refreshInvestments', handleRefresh);
+  }, []);
 
   const filteredProjects = sampleProjects.filter(project => {
     if (selectedType !== "all" && project.type !== selectedType) return false;
@@ -87,8 +113,17 @@ export default function Projects() {
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
       <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Infrastructure Projects</h1>
-        <Button>Add New Project</Button>
+        <div>
+          <h1 className="text-3xl font-bold">Infrastructure Projects</h1>
+          {lastUpdate && (
+            <p className="text-sm text-muted-foreground">
+              Last updated: {new Date(lastUpdate).toLocaleString()}
+            </p>
+          )}
+        </div>
+        <Button onClick={() => window.dispatchEvent(new CustomEvent('refreshInvestments'))}>
+          Refresh Data
+        </Button>
       </div>
 
       {/* Filters */}
