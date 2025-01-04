@@ -14,8 +14,16 @@ import {
 import { MapIcon, BarChart3Icon, FolderIcon } from "lucide-react";
 import SearchBar from "@/components/search/SearchBar";
 import UpdateNotification from "@/components/search/UpdateNotification";
+import { useEffect, useState } from "react";
+import { auth } from "@/lib/auth";
 
 export default function Home() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    setUser(auth.getUser());
+  }, []);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Navigation */}
@@ -53,6 +61,33 @@ export default function Home() {
                     Dashboard
                   </NavigationMenuLink>
                 </Link>
+              </NavigationMenuItem>
+              <NavigationMenuItem className="ml-auto">
+                {user ? (
+                  <NavigationMenuTrigger>
+                    {user.name}
+                    <NavigationMenuContent>
+                      <Link href="/profile" legacyBehavior passHref>
+                        <NavigationMenuLink className="block px-4 py-2">
+                          Profile Settings
+                        </NavigationMenuLink>
+                      </Link>
+                      <button
+                        onClick={() => {
+                          auth.logout();
+                          window.location.reload();
+                        }}
+                        className="block w-full text-left px-4 py-2 hover:bg-accent"
+                      >
+                        Sign Out
+                      </button>
+                    </NavigationMenuContent>
+                  </NavigationMenuTrigger>
+                ) : (
+                  <Link href="/auth/login" legacyBehavior passHref>
+                    <NavigationMenuLink>Sign In</NavigationMenuLink>
+                  </Link>
+                )}
               </NavigationMenuItem>
             </NavigationMenuList>
           </NavigationMenu>
