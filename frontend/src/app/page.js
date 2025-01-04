@@ -12,6 +12,8 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { MapIcon, BarChart3Icon, FolderIcon } from "lucide-react";
+import SearchBar from "@/components/search/SearchBar";
+import UpdateNotification from "@/components/search/UpdateNotification";
 
 export default function Home() {
   return (
@@ -66,15 +68,8 @@ export default function Home() {
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
             Track and analyze infrastructure investments across Latin America with our comprehensive platform.
           </p>
-          <div className="mt-10 flex items-center justify-center gap-x-6">
-            <Link href="/projects">
-              <Button size="lg">View Projects</Button>
-            </Link>
-            <Link href="/map">
-              <Button variant="outline" size="lg">
-                Explore Map
-              </Button>
-            </Link>
+          <div className="mt-10 max-w-md mx-auto">
+            <SearchBar />
           </div>
         </div>
       </div>
@@ -105,6 +100,8 @@ export default function Home() {
           </Card>
         </div>
       </div>
+
+      <UpdateNotification />
     </div>
   );
 }
